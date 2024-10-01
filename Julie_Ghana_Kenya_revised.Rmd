@@ -1,0 +1,333 @@
+---
+title: "AF Data Analysis Ghana and Kenya Sorting Revised"
+author: "Julie and Ruben"
+date: "March 22, 2024"
+output:
+  html_document:
+    df_print: paged
+---
+
+This is an [R Markdown](http://rmarkdown.rstudio.com) Notebook. When you execute code within the notebook, the results appear beneath the code. 
+
+Try executing this chunk by clicking the *Run* button within the chunk or by placing your cursor inside it and pressing *Cmd+Shift+Enter*. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Libraries and path 
+```{r}
+library(BayesianReasoning)
+library(car)
+library(datasets)
+library(data.table)
+library(gapminder)
+library(ggplot2)
+library(ggpubr)
+library(grid)
+library(gridExtra)
+library(multcompView)
+library(patchwork)
+library(plotly)
+library(reshape2)
+library(ragg)
+library(rstatix)
+library(tidyverse)
+setwd("/Users/julie/Desktop/untitled folder/23 FA/Lab/Manuscript/Data/R code, csv and excel file with formulas") 
+```
+# Loading and checking the data
+
+```{r}
+soilseq_plate_counts_boxplot <- read.csv("Ghana_Boxplot_Revised_JH_copy.csv")
+soilseq_plate_counts_boxplot_reorder <- soilseq_plate_counts_boxplot                           
+soilseq_plate_counts_boxplot_reorder$Sample_type <- factor(soilseq_plate_counts_boxplot_reorder$Sample_type, c("Accept", "Reject", "Calculated Bulk"))
+```
+# Figure for summary
+
+```{r}
+my_colors <- c("Accept" = "#38761D","Reject"= "#FF0000", "Calculated Bulk" = "#9900FF") 
+my_shapes <- c("Accept" = 19, "Reject" = 17, "Calculated Bulk" = 18)
+
+#figure
+p <- ggboxplot(soilseq_plate_counts_boxplot, x = "Sample_type", y = "AF_level_logppb", color = "black", shape = "Sample_type", palette = "Dark2", outlier.shape = NA, add.params = list(color = "Sample_type", alpha = 1), facet.by = "Count_type", short.panel.labs = TRUE) +
+  facet_grid(~factor(Count_type, levels=c('Ghana', 'Kenya'))) +
+  labs(x="Sample types", y="Level of Aflatoxin (log(ng/ng))") +
+  scale_fill_brewer(palette = "Set1") +
+  theme_bw() + 
+  labs(title = "Aflatoxin Contamination Levels of Maize Kernel", x = "Sample Type", y = "Aflatoxin Level (log(ng/g))") +
+  theme(legend.position="none")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position = "none")+
+  theme(strip.text.x = element_text(size = 15)) +
+  theme(axis.text = element_text(size = 12, color = "black"), axis.text.x = element_text(hjust=0.5),) +
+  theme(axis.title = element_text(size = 14, color = "black", face="bold")) +
+  ylim(0, 3) + 
+  geom_hline(yintercept=1, linetype="dashed", color = "#f37737")+
+  stat_compare_means(comparisons = my_comparisons)+stat_compare_means(label.x=1,label.y = 5) + coord_cartesian(ylim = c(0, 5))+
+  geom_jitter(data = soilseq_plate_counts_boxplot, aes(colour = Sample_type, fill= Sample_type, alpha = 1, shape = Sample_type), position = position_jitter(0.21), size = 2.5) +
+  scale_y_continuous(breaks=seq(0,5,1)) +
+  scale_color_manual(values = c("Accept" = "#38761D","Reject"= "#FF0000", "Calculated Bulk" = "#9900FF")) +
+  scale_fill_manual(values = c("Accept" = "#38761D","Reject"= "#FF0000", "Calculated Bulk" = "#9900FF")) +
+  stat_summary(fun = mean, geom = "point", size = 2.5, color = "black") +
+  scale_shape_manual(values = c("Accept" = 21, "Reject" = 24, "Calculated Bulk" = 22))
+p
+#Stats
+compare_means(AF_level_logppb ~ Sample_type,  data = soilseq_plate_counts_boxplot,group.by = "Count_type")
+my_comparisons <- list( c("Accept", "Calculated Bulk"), c("Reject", "Calculated Bulk"), c("Accept", "Reject") )
+#dash line
+#p+stat_compare_means(comparisons = my_comparisons)+stat_compare_means(label.x=1,label.y = 5) + coord_cartesian(ylim = c(0, 5))
+  
+P <- plot (p) 
+#ggsave("Fig. soilseq plate counts.pdf", device = "pdf", width = 5, height = 3.5, units = "in")
+```
+
+# Loading and checking the data
+
+```{r}
+Mass_Balance <- read.csv("Mass_Balance_Combined copy.csv")
+Mass_Balance_GK <- Mass_Balance                           
+Mass_Balance_GK$Sample_type <- factor(Mass_Balance_GK$Sample_type, c("Mass", "Aflatoxin"))
+```
+
+# Figure for Mass Balance
+
+```{r}
+my_colors <- c("Mass" = "#ff4c14","Aflatoxin"= "#c11616") 
+my_shapes <- c("Mass" = 12, "Aflatoxin" = 17)
+
+#figure
+q <- ggboxplot(Mass_Balance, x = "Sample_type", y = "perc_weight2", color = "black", shape = "Sample_type", palette = "Dark2", outlier.shape = NA, add.params = list(color = "Sample_type", alpha = 1), facet.by = "Count_type", short.panel.labs = TRUE) +
+  facet_grid(~factor(Count_type, levels=c('Ghana', 'Kenya'))) +
+  labs(x="Sample types", y="Percentage Rejection (%)") +
+  scale_fill_brewer(palette = "Set1") +
+  theme_bw() + 
+  labs(title = "Mass Balance", x = "Rejection Category", y = "Percentage Rejection (%)") +
+  theme(legend.position="none")+
+  theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), legend.position  = "none")+
+  theme(strip.text.x = element_text(size = 15)) +
+  theme(axis.text = element_text(size = 12, color = "black"), axis.text.x = element_text(hjust=0.5),) +
+  theme(axis.title = element_text(size = 14, color = "black", face="bold")) +
+  stat_compare_means(comparisons = my_comparisons)+stat_compare_means(label.x=1,label.y = 5) + coord_cartesian(ylim = c(0, 1))+
+  geom_jitter(data = Mass_Balance, aes(colour = Sample_type, fill= Sample_type, alpha = 1, shape = Sample_type), position = position_jitter(0.21), size = 2.5) +
+  scale_y_continuous(breaks=seq(0,1,0.5)) +
+  scale_color_manual(values = c("Mass" = "#ff4c14","Aflatoxin"= "#c11616")) +
+  scale_fill_manual(values = c("Mass" = "#ff4c14","Aflatoxin"= "#c11616")) +
+  stat_summary(fun = mean, geom = "point", size = 2.5, color = "black") +
+  scale_shape_manual(values = c("Mass" = 21, "Aflatoxin" = 24))
+
+
+Q <- plot (q) 
+#ggsave("Fig. soilseq plate counts.pdf", device = "pdf", width = 5, height = 3.5, units = "in")
+```
+
+# Figure H. 
+```{r}
+GhanaFM <- read.csv("Ghana_1_to_1_descending_JH.csv", header = TRUE)
+
+```
+
+```{r}
+data1 <- data.frame (x= GhanaFM$Sample_ID, y1 = GhanaFM$AF_ppb_accept_log, y2 = GhanaFM$AF_ppb_reject_log)
+
+
+datalist<-data1$x
+print(datalist)
+
+
+data_long1 <- melt(data1, id = "x")
+
+head(data_long1)
+
+
+
+ggp1FM <- ggplot(data_long1,  aes(x = factor(x, level = datalist), y = value, color = variable, shape = variable, show.legend = F))+  geom_point() + geom_line(aes(group = x), color = "black",arrow = arrow(length=unit(0.1,"cm"), ends="first", type = "closed")) +  labs(x = "Sample ID", y = "Aflatoxin Level (log(ng/g))", fill = "Aflatoxin Type" ) + scale_color_manual( values = c("#38761D", "#FF0000"), name = "Sorting Results",labels = c( "Accept Stream", "Reject Stream"))  + theme_classic()+theme(axis.text.x = element_text(vjust = 0.5,angle = 90), text = element_text(size = 11), legend.position = c(0.9, 0.6)) + scale_shape_manual(values = c(16,17,4), name = "Sorting Results",labels = c( "Accept Stream", "Reject Stream")) + ggtitle("Reduction in aflatoxin levels after sorting (Ghana)") + coord_cartesian(ylim = c(0, 4)) + theme(text = element_text(size = 15))+geom_hline(yintercept=1, linetype="dashed", color = "#f37737")
+
+ggp1FM
+```
+# Kenya
+```{r}
+KenyaFM <- read.csv("Kenya_1_to_1_descending_JH_copy.csv", header = TRUE)
+
+```
+
+```{r}
+data1 <- data.frame (x= KenyaFM$Sample_ID, y1 = KenyaFM$AF_ppb_accept_log, y2 = KenyaFM$AF_ppb_reject_log)
+
+
+datalist<-data1$x
+print(datalist)
+
+
+data_long1 <- melt(data1, id = "x")
+
+head(data_long1)
+
+
+
+ggp2FM <- ggplot(data_long1,  aes(x = factor(x, level = datalist), y = value, color = variable, shape = variable, show.legend = F))+  geom_point() + geom_line(aes(group = x), color = "black",arrow = arrow(length=unit(0.1,"cm"), ends="first", type = "closed")) +  labs(x = "Sample ID", y = "Aflatoxin Level (log(ng/g))", fill = "Aflatoxin Type" ) + scale_color_manual( values = c("#38761D", "#FF0000"), name = "Sorting Results",labels = c( "Accept Stream", "Reject Stream"))  + theme_classic()+theme(axis.text.x = element_text(vjust = 0.5,angle = 90), text = element_text(size = 11), legend.position = c(0.9, 0.6)) + scale_shape_manual(values = c(16,17,4), name = "Sorting Results",labels = c( "Accept Stream", "Reject Stream")) + ggtitle("Reduction in aflatoxin levels after sorting (Kenya)") + coord_cartesian(ylim = c(0, 4)) + theme(text = element_text(size = 15))+geom_hline(yintercept=1, linetype="dashed", color = "#f37737")
+
+ggp2FM
+```
+```{r}
+Ghana <- read.csv("Ghana_ppb_reject_JH.csv", header = TRUE)
+```
+
+```{r}
+Plot_creation<-function(col1s, col2s, title, xtitle, ytitle, xposition, yposition,xmax, ymax, xmin, ymin){
+  
+
+  col1mod <- Ghana[[col1s]]
+  col2mod<-Ghana[[col2s]]
+  
+  LM_reject_bulk <- lm(formula = col2mod~col1mod)
+  
+  summary(LM_reject_bulk)
+  
+  summary(LM_reject_bulk)$coefficients[,4]
+  
+  LM_reject_bulk$coefficients[[1]]
+  
+  lmp <- function (modelobject) {
+      if (class(modelobject) != "lm") stop("Not an object of class 'lm' ")
+      f <- summary(modelobject)$fstatistic
+      p <- pf(f[1],f[2],f[3],lower.tail=F)
+      attributes(p) <- NULL
+      return(p)}
+  
+  lmp(LM_reject_bulk)
+  
+  
+  Ghana_linear_reject_bulk <- ggplot(data = Ghana, aes_string(x=col1s, y=col2s)) + 
+  geom_point(size = 0.9) +
+  geom_smooth(method=lm) + 
+  scale_x_continuous(xtitle) + 
+  scale_y_continuous(ytitle)+ 
+  coord_cartesian(ylim = c(ymin, ymax), xlim = c(xmin, xmax)) + 
+  ggtitle(title) + 
+  geom_label(aes(x = xposition, y = yposition), size = 2.80 ,hjust = 0, 
+               label = paste(
+                                                 "Intercept =",signif(LM_reject_bulk$coefficients[[1]],3 ),
+                                                 " \nSlope =",signif(LM_reject_bulk$coefficients[[2]], 3),
+                                                 " \nP =",signif(lmp(LM_reject_bulk), 3))) 
+  
+  plot(Ghana_linear_reject_bulk)
+  return(Ghana_linear_reject_bulk)
+    
+}
+```
+  
+# FIG. J LM Mass percentage reject and Fraction Reject
+
+```{r}
+GhanaAF_mass_toxin  <- Plot_creation(col1s ="Reject_mass_perc" , 
+               col2s = "AF_ppb_percent_reject",
+              title = "Ghana Aflatoxin", 
+              xtitle = "Percent of Mass reject (%)",
+              ytitle = "Level Aflatoxin removed (%)",
+              xposition = 0.6,
+              yposition = 0.15,
+              xmax = 1.00,
+              ymax = 1.00,
+              xmin = 0,
+              ymin = 0
+              ) + geom_abline(intercept = 0, slope = 1, lty=2) + theme_classic()+ theme(text = element_text(size = 10))
+
+
+AF1.1 <- plot(GhanaAF_mass_toxin)
+
+```
+
+# Kenya
+```{r}
+Kenya <- read.csv("Kenya_ppb_reject_JH.csv", header = TRUE)
+```
+
+```{r}
+Plot_creation<-function(col1s, col2s, title, xtitle, ytitle, xposition, yposition,xmax, ymax, xmin, ymin){
+  
+
+  col1mod <- Kenya[[col1s]]
+  col2mod<-Kenya[[col2s]]
+  
+  LM_reject_bulk <- lm(formula = col2mod~col1mod)
+  
+  summary(LM_reject_bulk)
+  
+  summary(LM_reject_bulk)$coefficients[,4]
+  
+  LM_reject_bulk$coefficients[[1]]
+  
+  lmp <- function (modelobject) {
+      if (class(modelobject) != "lm") stop("Not an object of class 'lm' ")
+      f <- summary(modelobject)$fstatistic
+      p <- pf(f[1],f[2],f[3],lower.tail=F)
+      attributes(p) <- NULL
+      return(p)}
+  
+  lmp(LM_reject_bulk)
+  
+  
+  Kenya_linear_reject_bulk <- ggplot(data = Kenya, aes_string(x=col1s, y=col2s)) + 
+  geom_point(size = 0.9) +
+  geom_smooth(method=lm) + 
+  scale_x_continuous(xtitle) + 
+  scale_y_continuous(ytitle)+ 
+  coord_cartesian(ylim = c(ymin, ymax), xlim = c(xmin, xmax)) + 
+  ggtitle(title) + 
+  geom_label(aes(x = xposition, y = yposition), size = 2.80 ,hjust = 0, 
+               label = paste(
+                                                 "Intercept =",signif(LM_reject_bulk$coefficients[[1]],3 ),
+                                                 " \nSlope =",signif(LM_reject_bulk$coefficients[[2]], 3),
+                                                 " \nP =",signif(lmp(LM_reject_bulk), 3))) 
+  
+  plot( Kenya_linear_reject_bulk)
+  return( Kenya_linear_reject_bulk)
+    
+}
+```
+
+```{r}
+KenyaAF_mass_toxin  <- Plot_creation(col1s ="Reject_mass_perc" , 
+               col2s = "AF_ppb_percent_reject",
+              title = "Kenya Aflatoxin", 
+              xtitle = "Percent of Mass reject (%)",
+              ytitle = "Level Aflatoxin removed (%)",
+              xposition = 0.6,
+              yposition = 0.15,
+              xmax = 1.00,
+              ymax = 1.00,
+              xmin = 0,
+              ymin = 0
+              ) + geom_abline(intercept = 0, slope = 1, lty=2) + theme_classic()+ theme(text = element_text(size = 10))
+
+
+AF1.2 <- plot(KenyaAF_mass_toxin)
+
+```
+#Create Figure J
+
+```{r}
+
+FigJ <- ggarrange(AF1.1, AF1.2,
+          ncol = 2, nrow = 1)
+
+FigJ
+
+```
+# Loading data for paired t-test
+```{r}
+Ghanatest<-read.csv("Ghana_ttest_JH.csv",header=TRUE)
+Kenyatest<-read.csv("Kenya_ttest_JH.csv",header=TRUE)
+```
+```{r}
+# do the paired t-test for Ghana sample
+t.test(Ghanatest$accept,Ghanatest$reject,paired=TRUE,conf.level=0.95)
+```
+```{r}
+# do the paired t-test for Kenya sample
+t.test(Kenyatest$accept,Kenyatest$reject,paired=TRUE,conf.level=0.95)
+```
+Add a new chunk by clicking the *Insert Chunk* button on the toolbar or by pressing *Cmd+Option+I*.
+
+When you save the notebook, an HTML file containing the code and output will be saved alongside it (click the *Preview* button or press *Cmd+Shift+K* to preview the HTML file). 
+
+The preview shows you a rendered HTML copy of the contents of the editor. Consequently, unlike *Knit*, *Preview* does not run any R code chunks. Instead, the output of the chunk when it was last run in the editor is displayed.
+
