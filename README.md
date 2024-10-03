@@ -5,7 +5,7 @@ Aflatoxin contamination in post-harvest maize threatens food safety and security
 
 ## Usage
 ### Setup
-Data analysis was performed in [https://cloud.r-project.org/](R 4.4.1) and [https://posit.co/download/rstudio-desktop/](RStudio Desktop) with the following packages:
+Data analysis was performed in [R 4.4.1](https://cloud.r-project.org/) and [RStudio Desktop](https://posit.co/download/rstudio-desktop/) with the following packages:
 * BayesianReasoning
 * car
 * datasets
